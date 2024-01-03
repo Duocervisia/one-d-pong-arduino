@@ -19,11 +19,11 @@ bool gameRunning;
 
 unsigned long lastUpdateTime;
 int gameDelay;
-int minDelay = 60;
-int maxDelay = 200;
+int minDelay = 1;
+int maxDelay = 10;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("init");
 
   playerOneButton.setDebounceTime(50);
@@ -46,8 +46,9 @@ void loop() {
       updateBallVisual();
     }else if(ballDirection == -1){
       shootBack(1);
-      updateBallPosition();
-   	  updateBallVisual();
+      if(updateBallPosition()){
+        updateBallVisual();
+      }
     }
   }else if(playerTwoButton.isPressed()){
     if(!gameRunning){
@@ -55,14 +56,16 @@ void loop() {
       updateBallVisual();
     }else if(ballDirection == 1){
       shootBack(2);
-      updateBallPosition();
-      updateBallVisual();
+      if(updateBallPosition()){
+        updateBallVisual();
+      }
     }
   }else if (gameRunning && currentTime - lastUpdateTime >= gameDelay) {
     //Serial.println(currentTime - lastUpdateTime);
   	//Serial.println(gameDelay);
-    updateBallPosition();
-    updateBallVisual();
+    if(updateBallPosition()){
+      updateBallVisual();
+    }
     lastUpdateTime = currentTime;
   }
 }
@@ -116,12 +119,14 @@ void endGame(){
   }
 }
 
-void updateBallPosition() {
+bool updateBallPosition() {
   prevBallPosition = ballPosition;
   ballPosition += ballDirection;
   if(ballPosition < 0 || ballPosition > NUMPIXELS - 1){
     endGame();
+    return false;
   }
+  return true;
 }
 
 void updateBallVisual() {
