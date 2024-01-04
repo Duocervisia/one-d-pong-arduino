@@ -123,8 +123,14 @@ void endGame(){
   prevBallPosition = ONULL;
   leds[ballPosition] = CRGBA(0, 0, 0);
   for(int j = 0; j <= 6; j++){
-    leds[0] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
-    leds[NUM_LEDS - 1] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
+    if(ballDirection == 1){
+      leds[0] = CRGBA(0 , j%2 == 0 ? 255 : 0, 0);
+      leds[NUM_LEDS - 1] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
+    }else{
+      leds[0] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
+      leds[NUM_LEDS - 1] =  CRGBA(0, j%2 == 0 ? 255 : 0, 0);
+    }
+
     for (int i = j==6 ? 0 : 1; i < GAME_LED_WIDTH; i++) {
       leds[i] = CRGBA(0, j%2 == 0 ? 255 : 0, 0);
       leds[NUM_LEDS - 1 - i] = CRGBA(0, j%2 == 0 ? 255 : 0, 0);
