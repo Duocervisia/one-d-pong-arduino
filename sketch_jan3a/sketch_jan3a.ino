@@ -1,7 +1,7 @@
 #include <FastLED.h>
 #include <ezButton.h>
 
-#define DATA_PIN 5
+#define DATA_PIN 13
 #define BRIGHTNESS 5
 #define NUM_LEDS 100
 #define GAME_LED_WIDTH 10
@@ -15,12 +15,13 @@ ezButton playerTwoButton(12);
 int ballPosition;
 int prevBallPosition;
 int ballDirection;
+int animatedPixels[5];
 bool gameRunning;
 
 unsigned long lastUpdateTime;
 int gameDelay;
 int minDelay = 10;
-int maxDelay = 2000;
+int maxDelay = 50;
 
 void setup() {
   Serial.begin(115200);
@@ -30,7 +31,7 @@ void setup() {
   playerTwoButton.setDebounceTime(50);
 
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
-  FastLED.setBrightness(BRIGHTNESS);
+  // FastLED.setBrightness(BRIGHTNESS);
 
   setupGame();
 }
@@ -64,10 +65,16 @@ void loop() {
   }
 }
 
+CRGB CRGBA(int r, int g, int b, int brightness = BRIGHTNESS){
+    CRGB color = CRGB(r,g,b);
+    color.fadeLightBy(255 - brightness);
+    return color;
+}
+
 void setupGame() {
   for (int i = 0; i < GAME_LED_WIDTH; i++) {
-    leds[i] = CRGB(0, 255, 0);
-    leds[NUM_LEDS - 1 - i] = CRGB(0, 255, 0);
+    leds[i] = CRGBA(0, 255, 0);
+    leds[NUM_LEDS - 1 - i] = CRGBA(0, 255, 0);
     FastLED.show();
   }
 }
@@ -110,14 +117,13 @@ bool shootBack(int player) {
 void endGame(){
   gameRunning = false;
   prevBallPosition = ONULL;
-  leds[ballPosition] = CRGB(0, 0, 0);
+  leds[ballPosition] = CRGBA(0, 0, 0);
   for(int j = 0; j <= 6; j++){
-    leds[0] = CRGB(j%2 == 0 ? 255 : 0, 0, 0);
-    leds[NUM_LEDS - 1] = CRGB(j%2 == 0 ? 255 : 0, 0, 0);
-
+    leds[0] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
+    leds[NUM_LEDS - 1] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
     for (int i = j==6 ? 0 : 1; i < GAME_LED_WIDTH; i++) {
-      leds[i] = CRGB(0, j%2 == 0 ? 255 : 0, 0);
-      leds[NUM_LEDS - 1 - i] = CRGB(0, j%2 == 0 ? 255 : 0, 0);
+      leds[i] = CRGBA(0, j%2 == 0 ? 255 : 0, 0);
+      leds[NUM_LEDS - 1 - i] = CRGBA(0, j%2 == 0 ? 255 : 0, 0);
       FastLED.show();
       delay(20);
     }
@@ -137,14 +143,12 @@ bool updateBallPosition() {
 }
 
 void updateBallVisual() {
-  leds[ballPosition] = CRGB(0, 0, 255);
-  // Serial.println(ballPosition);
-
+  leds[ballPosition] = CRGBA(0, 0, 255);
   if (prevBallPosition != ONULL){
     if((prevBallPosition < GAME_LED_WIDTH && ballDirection == 1) ||(prevBallPosition >= NUM_LEDS - GAME_LED_WIDTH && ballDirection == -1)){
-      leds[prevBallPosition] = CRGB(0, 255, 0);
+      leds[prevBallPosition] = CRGBA(0, 255, 0);
     }else{
-      leds[prevBallPosition] = CRGB(0, 0, 0);
+      leds[prevBallPosition] = CRGBA(0, 0, 0);
     }
   }
   FastLED.show();
