@@ -1,7 +1,7 @@
 #include <Adafruit_NeoPixel.h>
 #include <ezButton.h>
 
-#define PIN 2
+#define PIN 13
 #define NUMPIXELS 100
 #define GAME_PIXEL_WIDTH 10
 #define ONULL -1
@@ -19,8 +19,8 @@ bool gameRunning;
 
 unsigned long lastUpdateTime;
 int gameDelay;
-int minDelay = 1;
-int maxDelay = 10;
+int minDelay = 20;
+int maxDelay = 100;
 
 void setup() {
   Serial.begin(115200);
@@ -70,9 +70,10 @@ void loop() {
   }
 }
 
+
 void setupGame() {
   for (int i = 0; i < GAME_PIXEL_WIDTH; i++) {
-    pixels.setPixelColor(i, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(i, pixels.Color(0, 255, 0));
     pixels.setPixelColor(NUMPIXELS - 1 - i, pixels.Color(0, 255, 0));
   }
 }
@@ -109,13 +110,15 @@ void endGame(){
   prevBallPosition = ONULL;
   pixels.setPixelColor(ballPosition, pixels.Color(0, 0, 0));
   for(int j = 0; j <= 6; j++){
-  	for (int i = 0; i < GAME_PIXEL_WIDTH; i++) {
-      pixels.setPixelColor(i, pixels.Color(j%2 == 0 ? 255 : 0, 0, 0));
+    pixels.setPixelColor(0, pixels.Color(j%2 == 0 ? 255 : 0, 0, 0));
+    pixels.setPixelColor(NUMPIXELS - 1, pixels.Color(j%2 == 0 ? 255 : 0, 0, 0));
+
+  	for (int i = j==6 ? 0 : 1; i < GAME_PIXEL_WIDTH; i++) {
+      pixels.setPixelColor(i, pixels.Color(0, j%2 == 0 ? 255 : 0, 0));
       pixels.setPixelColor(NUMPIXELS - 1 - i, pixels.Color(0, j%2 == 0 ? 255 : 0, 0));
       pixels.show();
-      delay(20);
+      delay(100);
   	}
-    delay(100);
   }
 }
 
@@ -134,7 +137,11 @@ void updateBallVisual() {
   Serial.println(ballPosition);
 
   if (prevBallPosition != ONULL){
-    pixels.setPixelColor(prevBallPosition, pixels.Color(prevBallPosition < GAME_PIXEL_WIDTH && ballDirection == 1 ? 255 : 0, prevBallPosition >= NUMPIXELS - GAME_PIXEL_WIDTH && ballDirection == -1 ? 255 : 0, 0));
+    if((prevBallPosition < GAME_PIXEL_WIDTH && ballDirection == 1) ||(prevBallPosition >= NUMPIXELS - GAME_PIXEL_WIDTH && ballDirection == -1)){
+      pixels.setPixelColor(prevBallPosition, pixels.Color(0, 255, 0));
+    }else{
+      pixels.setPixelColor(prevBallPosition, pixels.Color(0, 0, 0));
+	}
   }
   pixels.show();
 }
