@@ -15,7 +15,8 @@ ezButton playerTwoButton(12);
 int ballPosition;
 int prevBallPosition;
 int ballDirection;
-int animatedPixels[5];
+int animatedPixels[5] = {ONULL,ONULL,ONULL,ONULL,ONULL};
+bool animationSet = false;
 bool gameRunning;
 
 unsigned long lastUpdateTime;
@@ -87,6 +88,8 @@ void startGame(int player) {
     ballPosition = NUM_LEDS - GAME_LED_WIDTH;
     ballDirection = -1;
   }
+  animatedPixels[0] = ballPosition;
+  animationSet = true;
   gameDelay = (maxDelay - minDelay) / 2;
   lastUpdateTime = gameDelay;
   Serial.println(gameDelay);
@@ -106,7 +109,8 @@ bool shootBack(int player) {
       gameDelay = minDelay + (float(NUM_LEDS - 1 - ballPosition) / float(GAME_LED_WIDTH-1)) * (maxDelay - minDelay);
     }
     Serial.println(String(minDelay) + " + " +  String(ballPosition) + " / " + String(GAME_LED_WIDTH-1) + " * " + String(maxDelay - minDelay) + " = " + String(gameDelay));
-
+    animatedPixels[0] = ballPosition;
+    animationSet = true;
   }else{
     endGame();
     return false;
@@ -139,6 +143,33 @@ bool updateBallPosition() {
     endGame();
     return false;
   }
+  if(!animationSet){
+    for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
+      if(i != 0){
+        animatedPixels[i] = animatedPixels[i-1];
+      }else if(ballDirection == 1){
+        if(animatedPixels[i+1] >=1){
+          animatedPixels[i] = animatedPixels[i+1]-1;
+        }else{
+          animatedPixels[i] = ONULL;
+        }
+      }else if(ballDirection == -1){
+        if(animatedPixels[i+1] < NUM_LEDS - 1 && animatedPixels[i+1] > ONULL){
+          animatedPixels[i] = animatedPixels[i+1]+1;
+        }else{
+          animatedPixels[i] = ONULL;
+        }
+      }
+    }
+  }else{
+    animationSet = false;
+  }
+  // for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
+  //   Serial.print(animatedPixels[i]);
+  //   Serial.print(" ");
+  // }
+  // Serial.println();
+
   return true;
 }
 
@@ -149,6 +180,11 @@ void updateBallVisual() {
       leds[prevBallPosition] = CRGBA(0, 255, 0);
     }else{
       leds[prevBallPosition] = CRGBA(0, 0, 0);
+    }
+  }
+   for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
+    if(animatedPixels[i] != ONULL){
+      leds[animatedPixels[i]] = CRGBA(0, 255, 20 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1), BRIGHTNESS + 10 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1));
     }
   }
   FastLED.show();
