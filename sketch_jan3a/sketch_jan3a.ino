@@ -4,7 +4,7 @@
 #define DATA_PIN 13
 #define BRIGHTNESS 5
 #define NUM_LEDS 100
-#define GAME_LED_WIDTH 10
+#define GAME_LED_WIDTH 12
 #define ONULL -1
 
 CRGB leds[NUM_LEDS];
@@ -33,8 +33,6 @@ void setup() {
   playerTwoButton.setDebounceTime(50);
 
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
-  // FastLED.setBrightness(BRIGHTNESS);
-
   setupGame();
 }
 
@@ -43,8 +41,12 @@ void loop() {
   playerTwoButton.loop();
 
   unsigned long currentTime = millis();
+
+  if(currentTime < lastUpdateTime){
+    return;
+  }
   
-  if(playerOneButton.isReleased()){
+  if(playerOneButton.isPressed()){
     Serial.println("press player 1");
     if(!gameRunning){
       startGame(1);
@@ -52,7 +54,9 @@ void loop() {
       shootBack(1);
     }
   }
-  if(playerTwoButton.isReleased()){
+  if(playerTwoButton.isPressed()){
+    Serial.println(playerTwoButton.isReleased());
+
     if(!gameRunning){
       startGame(2);
     }else if(ballDirection == 1){
@@ -60,8 +64,8 @@ void loop() {
     }
   }
   if (gameRunning && currentTime - lastUpdateTime >= gameDelay) {
-    if(updateBallPosition()){
-      updateBallVisual();
+    if(updatePositions()){
+      updateVisuals();
     }
     lastUpdateTime = currentTime;
   }
@@ -94,7 +98,6 @@ void startGame(int player) {
   animationSet = true;
   gameDelay = (maxDelay - minDelay) / 2;
   lastUpdateTime = gameDelay;
-  Serial.println(gameDelay);
   gameRunning = true;
 }
 
@@ -148,7 +151,14 @@ void updateAnimationVisual(bool show = false, bool end = false){
       if(!end){
         leds[animatedPixels[i]] = CRGBA(0, 255, 20 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1), BRIGHTNESS + 10 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1));
       }else{
-        leds[animatedPixels[i]] = CRGBA(40 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1), 255, 0, BRIGHTNESS + 10 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1));
+        float t = static_cast<float>(i) / (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1);
+
+        leds[animatedPixels[i]] = CRGBA(
+            static_cast<uint8_t>((1.0 - t) * 255),  // Red value (decreasing from 255 to 0 as i increases)
+            static_cast<uint8_t>(t * 255),           // Green value (increasing from 0 to 255 as i increases)
+            0,                                       // Blue value (set to 0)
+            BRIGHTNESS + 10 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1)
+        );
       }
     }
   }
@@ -175,26 +185,20 @@ void endGame(){
     for (int i = 0; i < iteration; i++) {
       updateAnimationPosition();
       updateAnimationVisual(true, j != 6);
-      delay(50);
+      delay(40);
     }
   }
-
-  // for(int j = 0; j <= 6; j++){
-  //   if(ballDirection == 1){
-  //     leds[0] = CRGBA(0 , j%2 == 0 ? 255 : 0, 0);
-  //     leds[NUM_LEDS - 1] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
-  //   }else{
-  //     leds[0] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
-  //     leds[NUM_LEDS - 1] =  CRGBA(0, j%2 == 0 ? 255 : 0, 0);
-  //   }
-
-  //   for (int i = j==6 ? 0 : 1; i < GAME_LED_WIDTH; i++) {
-  //     leds[i] = CRGBA(j%2 == 1 ? 255 : 0, j%2 == 0 ? 255 : 0, 0);
-  //     leds[NUM_LEDS - 1 - i] = CRGBA(j%2 == 1 ? 255 : 0, j%2 == 0 ? 255 : 0, 0);
-  //     FastLED.show();
-  //     delay(20);
-  //   }
-  // }
+  //Neccesary because of isPressed bug
+  lastUpdateTime = millis() + 50;
+}
+bool updatePositions(){
+  bool stillRunning = updateBallPosition();
+  if(!animationSet){
+    updateAnimationPosition();
+  }else{
+    animationSet = false;
+  }
+  return stillRunning;
 }
 
 bool updateBallPosition() {
@@ -204,18 +208,13 @@ bool updateBallPosition() {
     endGame();
     return false;
   }
-  if(!animationSet){
-    updateAnimationPosition();
-  }else{
-    animationSet = false;
-  }
-  // for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
-  //   Serial.print(animatedPixels[i]);
-  //   Serial.print(" ");
-  // }
-  // Serial.println();
-
   return true;
+}
+
+void updateVisuals(){
+  updateBallVisual();
+  updateAnimationVisual();
+  FastLED.show();
 }
 
 void updateBallVisual() {
@@ -227,6 +226,4 @@ void updateBallVisual() {
       leds[prevBallPosition] = CRGBA(0, 0, 0);
     }
   }
-  updateAnimationVisual();
-  FastLED.show();
 }
