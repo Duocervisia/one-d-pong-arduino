@@ -123,29 +123,78 @@ bool shootBack(int player) {
   }
   return true;
 }
+void updateAnimationPosition(){
+  for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
+    if(i != 0){
+      animatedPixels[i] = animatedPixels[i-1];
+    }else if(ballDirection == 1){
+      if(animatedPixels[i+1] >=1){
+        animatedPixels[i] = animatedPixels[i+1]-1;
+      }else{
+        animatedPixels[i] = ONULL;
+      }
+    }else if(ballDirection == -1){
+      if(animatedPixels[i+1] < NUM_LEDS - 1 && animatedPixels[i+1] > ONULL){
+        animatedPixels[i] = animatedPixels[i+1]+1;
+      }else{
+        animatedPixels[i] = ONULL;
+      }
+    }
+  }
+}
+void updateAnimationVisual(bool show = false, bool end = false){
+  for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
+    if(animatedPixels[i] != ONULL){
+      if(!end){
+        leds[animatedPixels[i]] = CRGBA(0, 255, 20 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1), BRIGHTNESS + 10 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1));
+      }else{
+        leds[animatedPixels[i]] = CRGBA(40 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1), 255, 0, BRIGHTNESS + 10 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1));
+      }
+    }
+  }
+  if(show){
+    FastLED.show();
+  }
+}
 
 void endGame(){
   gameRunning = false;
   prevBallPosition = ONULL;
   leds[ballPosition] = CRGBA(0, 0, 0);
-  for(int j = 0; j <= 6; j++){
-    if(ballDirection == 1){
-      leds[0] = CRGBA(0 , j%2 == 0 ? 255 : 0, 0);
-      leds[NUM_LEDS - 1] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
-    }else{
-      leds[0] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
-      leds[NUM_LEDS - 1] =  CRGBA(0, j%2 == 0 ? 255 : 0, 0);
-    }
+  int startPosition = NUM_LEDS - GAME_LED_WIDTH;
+  if(ballDirection == -1){
+    startPosition = GAME_LED_WIDTH - 1;
+  }
+  ballDirection *= -1;
 
-    for (int i = j==6 ? 0 : 1; i < GAME_LED_WIDTH; i++) {
-      leds[i] = CRGBA(j%2 == 1 ? 255 : 0, j%2 == 0 ? 255 : 0, 0);
-      leds[NUM_LEDS - 1 - i] = CRGBA(j%2 == 1 ? 255 : 0, j%2 == 0 ? 255 : 0, 0);
-      FastLED.show();
-      delay(20);
+
+  for(int j = 0; j <= 6; j++){
+    animatedPixels[0] = startPosition;
+    int iteration = j == 6 ? GAME_LED_WIDTH + sizeof(animatedPixels) / sizeof(animatedPixels[0]) : GAME_LED_WIDTH;
+
+    for (int i = 0; i < iteration; i++) {
+      updateAnimationPosition();
+      updateAnimationVisual(true, j != 6);
+      delay(50);
     }
   }
-  playerOneButton.loop();
-  playerTwoButton.loop();
+
+  // for(int j = 0; j <= 6; j++){
+  //   if(ballDirection == 1){
+  //     leds[0] = CRGBA(0 , j%2 == 0 ? 255 : 0, 0);
+  //     leds[NUM_LEDS - 1] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
+  //   }else{
+  //     leds[0] = CRGBA(j%2 == 0 ? 255 : 0, 0, 0);
+  //     leds[NUM_LEDS - 1] =  CRGBA(0, j%2 == 0 ? 255 : 0, 0);
+  //   }
+
+  //   for (int i = j==6 ? 0 : 1; i < GAME_LED_WIDTH; i++) {
+  //     leds[i] = CRGBA(j%2 == 1 ? 255 : 0, j%2 == 0 ? 255 : 0, 0);
+  //     leds[NUM_LEDS - 1 - i] = CRGBA(j%2 == 1 ? 255 : 0, j%2 == 0 ? 255 : 0, 0);
+  //     FastLED.show();
+  //     delay(20);
+  //   }
+  // }
 }
 
 bool updateBallPosition() {
@@ -156,23 +205,7 @@ bool updateBallPosition() {
     return false;
   }
   if(!animationSet){
-    for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
-      if(i != 0){
-        animatedPixels[i] = animatedPixels[i-1];
-      }else if(ballDirection == 1){
-        if(animatedPixels[i+1] >=1){
-          animatedPixels[i] = animatedPixels[i+1]-1;
-        }else{
-          animatedPixels[i] = ONULL;
-        }
-      }else if(ballDirection == -1){
-        if(animatedPixels[i+1] < NUM_LEDS - 1 && animatedPixels[i+1] > ONULL){
-          animatedPixels[i] = animatedPixels[i+1]+1;
-        }else{
-          animatedPixels[i] = ONULL;
-        }
-      }
-    }
+    updateAnimationPosition();
   }else{
     animationSet = false;
   }
@@ -194,10 +227,6 @@ void updateBallVisual() {
       leds[prevBallPosition] = CRGBA(0, 0, 0);
     }
   }
-   for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
-    if(animatedPixels[i] != ONULL){
-      leds[animatedPixels[i]] = CRGBA(0, 255, 20 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1), BRIGHTNESS + 10 * (sizeof(animatedPixels) / sizeof(animatedPixels[0]) - i - 1));
-    }
-  }
+  updateAnimationVisual();
   FastLED.show();
 }
