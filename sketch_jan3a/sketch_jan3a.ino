@@ -17,7 +17,8 @@ int prevBallPosition;
 int ballDirection;
 int animatedPixels[5] = {ONULL,ONULL,ONULL,ONULL,ONULL};
 bool animationSet = false;
-bool gameRunning;
+bool gameRunning = false;
+int bounceCounter = 0;
 
 unsigned long lastUpdateTime;
 int gameDelay;
@@ -88,6 +89,7 @@ void startGame(int player) {
     ballPosition = NUM_LEDS - GAME_LED_WIDTH;
     ballDirection = -1;
   }
+  bounceCounter = 0;
   animatedPixels[0] = ballPosition;
   animationSet = true;
   gameDelay = (maxDelay - minDelay) / 2;
@@ -102,13 +104,17 @@ bool shootBack(int player) {
     (player == 2 && ballPosition >= NUM_LEDS - GAME_LED_WIDTH)
   ){
     ballDirection *= -1;
+    bounceCounter++;
     
     if(ballPosition < GAME_LED_WIDTH){
       gameDelay = minDelay + (float(ballPosition)/ float(GAME_LED_WIDTH-1)) * (maxDelay - minDelay);
     }else{
       gameDelay = minDelay + (float(NUM_LEDS - 1 - ballPosition) / float(GAME_LED_WIDTH-1)) * (maxDelay - minDelay);
     }
-    Serial.println(String(minDelay) + " + " +  String(ballPosition) + " / " + String(GAME_LED_WIDTH-1) + " * " + String(maxDelay - minDelay) + " = " + String(gameDelay));
+
+    float speedMultiplier = 1.0 - (float)bounceCounter / 50.0; // Adjust this multiplier as needed
+    gameDelay = max(minDelay, int(gameDelay * speedMultiplier));
+    
     animatedPixels[0] = ballPosition;
     animationSet = true;
   }else{
@@ -132,8 +138,8 @@ void endGame(){
     }
 
     for (int i = j==6 ? 0 : 1; i < GAME_LED_WIDTH; i++) {
-      leds[i] = CRGBA(0, j%2 == 0 ? 255 : 0, 0);
-      leds[NUM_LEDS - 1 - i] = CRGBA(0, j%2 == 0 ? 255 : 0, 0);
+      leds[i] = CRGBA(j%2 == 1 ? 255 : 0, j%2 == 0 ? 255 : 0, 0);
+      leds[NUM_LEDS - 1 - i] = CRGBA(j%2 == 1 ? 255 : 0, j%2 == 0 ? 255 : 0, 0);
       FastLED.show();
       delay(20);
     }
@@ -180,7 +186,7 @@ bool updateBallPosition() {
 }
 
 void updateBallVisual() {
-  leds[ballPosition] = CRGBA(0, 0, 255);
+  leds[ballPosition] = CRGBA(255, 255, 255);
   if (prevBallPosition != ONULL){
     if((prevBallPosition < GAME_LED_WIDTH && ballDirection == 1) ||(prevBallPosition >= NUM_LEDS - GAME_LED_WIDTH && ballDirection == -1)){
       leds[prevBallPosition] = CRGBA(0, 255, 0);
