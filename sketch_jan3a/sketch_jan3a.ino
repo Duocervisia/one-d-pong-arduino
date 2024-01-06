@@ -191,6 +191,7 @@ void endGame(){
       delay(40);
     }
   }
+  setupGame();
   //Neccesary because of isPressed bug
   gameJustEnded = true;
 }
