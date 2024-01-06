@@ -18,6 +18,7 @@ int ballDirection;
 int animatedPixels[5] = {ONULL,ONULL,ONULL,ONULL,ONULL};
 bool animationSet = false;
 bool gameRunning = false;
+bool gameJustEnded = false;
 int bounceCounter = 0;
 
 unsigned long lastUpdateTime;
@@ -42,8 +43,10 @@ void loop() {
 
   unsigned long currentTime = millis();
 
-  if(currentTime < lastUpdateTime){
+  if(gameJustEnded && (playerOneButton.isPressed() || playerTwoButton.isPressed())){
     return;
+  }else{
+    gameJustEnded = false;
   }
   
   if(playerOneButton.isPressed()){
@@ -115,8 +118,8 @@ bool shootBack(int player) {
       gameDelay = minDelay + (float(NUM_LEDS - 1 - ballPosition) / float(GAME_LED_WIDTH-1)) * (maxDelay - minDelay);
     }
 
-    float speedMultiplier = 1.0 - (float)bounceCounter / 50.0; // Adjust this multiplier as needed
-    gameDelay = max(minDelay, int(gameDelay * speedMultiplier));
+    float speedMultiplier = 1.0 - (float) min(bounceCounter, 49) / 50.0; // Adjust this multiplier as needed
+    gameDelay = int(gameDelay * speedMultiplier);
     
     animatedPixels[0] = ballPosition;
     animationSet = true;
@@ -178,18 +181,18 @@ void endGame(){
   ballDirection *= -1;
 
 
-  for(int j = 0; j <= 6; j++){
+  for(int j = 0; j <= 3; j++){
     animatedPixels[0] = startPosition;
-    int iteration = j == 6 ? GAME_LED_WIDTH + sizeof(animatedPixels) / sizeof(animatedPixels[0]) : GAME_LED_WIDTH;
+    int iteration = j == 3 ? GAME_LED_WIDTH + sizeof(animatedPixels) / sizeof(animatedPixels[0]) : GAME_LED_WIDTH;
 
     for (int i = 0; i < iteration; i++) {
       updateAnimationPosition();
-      updateAnimationVisual(true, j != 6);
+      updateAnimationVisual(true, j != 3);
       delay(40);
     }
   }
   //Neccesary because of isPressed bug
-  lastUpdateTime = millis() + 50;
+  gameJustEnded = true;
 }
 bool updatePositions(){
   bool stillRunning = updateBallPosition();
