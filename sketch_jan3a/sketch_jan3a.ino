@@ -16,6 +16,9 @@ int ballPosition;
 int prevBallPosition;
 int ballDirection;
 int animatedPixels[5] = {ONULL,ONULL,ONULL,ONULL,ONULL};
+int scorePlayerOne = 0;
+int scorePlayerTwo = 0;
+int scoreNeeded = 3;
 bool animationSet = false;
 bool gameRunning = false;
 bool gameJustEnded = false;
@@ -96,6 +99,10 @@ void startGame(int player) {
     ballPosition = NUM_LEDS - GAME_LED_WIDTH;
     ballDirection = -1;
   }
+  if(scorePlayerOne == scoreNeeded || scorePlayerTwo == scoreNeeded){
+    scorePlayerOne = 0;
+    scorePlayerTwo = 0;
+  }
   bounceCounter = 0;
   animatedPixels[0] = ballPosition;
   animationSet = true;
@@ -124,7 +131,7 @@ bool shootBack(int player) {
     animatedPixels[0] = ballPosition;
     animationSet = true;
   }else{
-    endGame();
+    endGame(ballDirection == 1);
     return false;
   }
   return true;
@@ -169,14 +176,36 @@ void updateAnimationVisual(bool show = false, bool end = false){
     FastLED.show();
   }
 }
+void showScoreBoard(int brightness = BRIGHTNESS){
+  CRGB borderColor = CRGBA(255, 255, 255, brightness);
+  CRGB playerColor = CRGBA(0, 255, 0, brightness);
 
-void endGame(){
+  leds[int(NUM_LEDS*0.5)] = borderColor;
+  leds[int(NUM_LEDS*0.5) + scoreNeeded + 1] = borderColor;
+  leds[int(NUM_LEDS*0.5)-1] = borderColor;
+  leds[int(NUM_LEDS*0.5)-1 - scoreNeeded - 1] = borderColor;
+
+  for(int i = 0; i < scorePlayerOne; i++){
+    leds[int(NUM_LEDS*0.5) - 2 - i] = playerColor;
+  }
+  for(int i = 0; i < scorePlayerTwo; i++){
+    leds[int(NUM_LEDS*0.5) + 1 + i] = playerColor;
+  }
+  FastLED.show();
+}
+
+void endGame(bool playerOneWins){
   gameRunning = false;
   prevBallPosition = ONULL;
   leds[ballPosition] = CRGBA(0, 0, 0);
-  int startPosition = NUM_LEDS - GAME_LED_WIDTH;
-  if(ballDirection == -1){
+  showScoreBoard();
+  int startPosition;
+  if(playerOneWins){
+    startPosition = NUM_LEDS - GAME_LED_WIDTH;
+    scorePlayerOne++;
+  }else{
     startPosition = GAME_LED_WIDTH - 1;
+    scorePlayerTwo++;
   }
   ballDirection *= -1;
 
@@ -184,13 +213,34 @@ void endGame(){
   for(int j = 0; j <= 3; j++){
     animatedPixels[0] = startPosition;
     int iteration = j == 3 ? GAME_LED_WIDTH + sizeof(animatedPixels) / sizeof(animatedPixels[0]) : GAME_LED_WIDTH;
+    CRGB playerColor = CRGBA(0, 255, 0);
 
+   
     for (int i = 0; i < iteration; i++) {
+      if(j != 3){
+        updateScoreWinnerVisual(playerOneWins, i);
+      }
       updateAnimationPosition();
       updateAnimationVisual(true, j != 3);
       delay(40);
     }
   }
+
+  if(scorePlayerOne == scoreNeeded || scorePlayerTwo == scoreNeeded){
+   for (int i = -5; i < 56; i++) {
+        // Calculate the angle in radians with a higher frequency
+        double angle = static_cast<double>(i) * 2.0 * PI / 20.0;
+
+        // Calculate sin value and scale to be between 0 and 1
+        double sinValue = sin(angle);
+        double scaledValue = (sinValue + 1.0) / 2.0; // Scale to be between 0 and 1
+        Serial.println(String(angle) + " " + String(scaledValue));
+        showScoreBoard(BRIGHTNESS + 15 * scaledValue);
+        delay(40);
+    }
+    delay(1500);
+  }
+  removeScoreBoard();
   setupGame();
   //Neccesary because of isPressed bug
   gameJustEnded = true;
@@ -209,7 +259,7 @@ bool updateBallPosition() {
   prevBallPosition = ballPosition;
   ballPosition += ballDirection;
   if(ballPosition < 0 || ballPosition > NUM_LEDS - 1){
-    endGame();
+    endGame(ballDirection == 1);
     return false;
   }
   return true;
@@ -230,4 +280,30 @@ void updateBallVisual() {
       leds[prevBallPosition] = CRGBA(0, 0, 0);
     }
   }
+}
+
+void removeScoreBoard(){
+  for(int j = 1; j <= 10; j++){
+    showScoreBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
+    Serial.println(float(BRIGHTNESS)/10.0 * (10.0-j));
+    delay(10);
+  }
+}
+void updateScoreWinnerVisual(bool playerOneWins, int i){
+  int position;
+  if(playerOneWins){
+    position = int(NUM_LEDS*0.5) - 1 - scorePlayerOne;
+  }else{
+    position = int(NUM_LEDS*0.5) + scorePlayerTwo;
+  }
+  float t = static_cast<float>(i) / (GAME_LED_WIDTH-1);
+  Serial.println(t);
+
+  leds[position] = CRGBA(
+    static_cast<uint8_t>((1.0 - t) * 255),  // Red value (decreasing from 255 to 0 as i increases)
+    static_cast<uint8_t>(t * 255),           // Green value (increasing from 0 to 255 as i increases)
+    0,                                       // Blue value (set to 0)
+    BRIGHTNESS + (50/GAME_LED_WIDTH) * (GAME_LED_WIDTH - 1 - i )
+  );
+  FastLED.show();
 }
