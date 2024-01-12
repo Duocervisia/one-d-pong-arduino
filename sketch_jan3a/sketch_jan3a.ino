@@ -53,7 +53,6 @@ void loop() {
   }
   
   if(playerOneButton.isPressed()){
-    Serial.println("press player 1");
     if(!gameRunning){
       startGame(1);
     }else if(ballDirection == -1){
@@ -61,8 +60,6 @@ void loop() {
     }
   }
   if(playerTwoButton.isPressed()){
-    Serial.println(playerTwoButton.isReleased());
-
     if(!gameRunning){
       startGame(2);
     }else if(ballDirection == 1){
@@ -92,6 +89,9 @@ void setupGame() {
 }
 
 void startGame(int player) {
+  if(scorePlayerOne != 0 || scorePlayerTwo != 0){
+    removeScoreBoard();
+  }
   if (player == 1) {
     ballPosition = GAME_LED_WIDTH - 1;
     ballDirection = 1;
@@ -179,17 +179,26 @@ void updateAnimationVisual(bool show = false, bool end = false){
 void showScoreBoard(int brightness = BRIGHTNESS){
   CRGB borderColor = CRGBA(255, 255, 255, brightness);
   CRGB playerColor = CRGBA(0, 255, 0, brightness);
+  CRGB backgroundColor = CRGBA(255, 255, 0, brightness);
 
   leds[int(NUM_LEDS*0.5)] = borderColor;
-  leds[int(NUM_LEDS*0.5) + scoreNeeded + 1] = borderColor;
+  // leds[int(NUM_LEDS*0.5) + scoreNeeded + 1] = borderColor;
   leds[int(NUM_LEDS*0.5)-1] = borderColor;
-  leds[int(NUM_LEDS*0.5)-1 - scoreNeeded - 1] = borderColor;
+  // leds[int(NUM_LEDS*0.5)-1 - scoreNeeded - 1] = borderColor;
 
-  for(int i = 0; i < scorePlayerOne; i++){
-    leds[int(NUM_LEDS*0.5) - 2 - i] = playerColor;
+  for(int i = 0; i < scoreNeeded; i++){
+    if(i < scorePlayerOne){
+      leds[int(NUM_LEDS*0.5) - 2 - i] = playerColor;
+    }else{
+      leds[int(NUM_LEDS*0.5) - 2 - i] = backgroundColor;
+    }
   }
-  for(int i = 0; i < scorePlayerTwo; i++){
-    leds[int(NUM_LEDS*0.5) + 1 + i] = playerColor;
+  for(int i = 0; i < scoreNeeded; i++){
+    if(i < scorePlayerTwo){
+      leds[int(NUM_LEDS*0.5) + 1 + i] = playerColor;
+    }else{
+      leds[int(NUM_LEDS*0.5) + 1 + i] = backgroundColor;
+    }
   }
   FastLED.show();
 }
@@ -234,13 +243,11 @@ void endGame(bool playerOneWins){
         // Calculate sin value and scale to be between 0 and 1
         double sinValue = sin(angle);
         double scaledValue = (sinValue + 1.0) / 2.0; // Scale to be between 0 and 1
-        Serial.println(String(angle) + " " + String(scaledValue));
+        // Serial.println(String(angle) + " " + String(scaledValue));
         showScoreBoard(BRIGHTNESS + 15 * scaledValue);
         delay(40);
     }
-    delay(1500);
   }
-  removeScoreBoard();
   setupGame();
   //Neccesary because of isPressed bug
   gameJustEnded = true;
@@ -285,7 +292,6 @@ void updateBallVisual() {
 void removeScoreBoard(){
   for(int j = 1; j <= 10; j++){
     showScoreBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
-    Serial.println(float(BRIGHTNESS)/10.0 * (10.0-j));
     delay(10);
   }
 }
@@ -296,14 +302,17 @@ void updateScoreWinnerVisual(bool playerOneWins, int i){
   }else{
     position = int(NUM_LEDS*0.5) + scorePlayerTwo;
   }
-  float t = static_cast<float>(i) / (GAME_LED_WIDTH-1);
-  Serial.println(t);
+  // Calculate the angle in radians with a higher frequency
+  double angle = static_cast<double>(i+1+(GAME_LED_WIDTH/4)) * 2.0 * PI / (GAME_LED_WIDTH);
 
+  // Calculate sin value and scale to be between 0 and 1
+  double sinValue = sin(angle);
+  double scaledValue = (sinValue + 1.0) / 2.0; // Scale to be between 0 and 1
+  // Serial.println(String(angle) + " " + String(scaledValue));
   leds[position] = CRGBA(
-    static_cast<uint8_t>((1.0 - t) * 255),  // Red value (decreasing from 255 to 0 as i increases)
-    static_cast<uint8_t>(t * 255),           // Green value (increasing from 0 to 255 as i increases)
-    0,                                       // Blue value (set to 0)
-    BRIGHTNESS + (50/GAME_LED_WIDTH) * (GAME_LED_WIDTH - 1 - i )
+    0,  // Red value (decreasing from 255 to 0 as i increases)
+    static_cast<uint8_t>(scaledValue * 255),           // Green value (increasing from 0 to 255 as i increases)
+    0                                       // Blue value (set to 0)
   );
   FastLED.show();
 }
