@@ -19,15 +19,21 @@ int animatedPixels[5] = {ONULL,ONULL,ONULL,ONULL,ONULL};
 int scorePlayerOne = 0;
 int scorePlayerTwo = 0;
 int scoreNeeded = 3;
+bool scoreBoardShown = false;
 bool animationSet = false;
 bool gameRunning = false;
 bool gameJustEnded = false;
 int bounceCounter = 0;
+int difficulty = ONULL;
+int difficultyLevels = 10;
+bool difficultyBoardShown = false;
 
 unsigned long lastUpdateTime;
 int gameDelay;
 int minDelay = 10;
 int maxDelay = 50;
+int minDelayAdapted;
+int maxDelayAdapted;
 
 void setup() {
   Serial.begin(115200);
@@ -72,12 +78,61 @@ void loop() {
     }
     lastUpdateTime = currentTime;
   }
+  if(!gameRunning){
+    checkDifficultyPotentiometer();
+  }
 }
-
 CRGB CRGBA(int r, int g, int b, int brightness = BRIGHTNESS){
     CRGB color = CRGB(r,g,b);
     color.fadeLightBy(255 - brightness);
     return color;
+}
+void showDifficultyBoard(int brightness = BRIGHTNESS){
+  difficultyBoardShown = true;
+  scoreBoardShown = false;
+  CRGB borderColor = CRGBA(255, 255, 255, brightness);
+  CRGB playerColor = CRGBA(0, 255, 0, brightness);
+  CRGB backgroundColor = CRGBA(255, 255, 0, brightness);
+
+  leds[int(NUM_LEDS*0.5) + difficultyLevels/2] = borderColor;
+  leds[int(NUM_LEDS*0.5)-1 - difficultyLevels/2] = borderColor;
+  for(int i = -difficultyLevels/2; i < difficultyLevels/2; i++){
+    if(i+difficultyLevels/2 <= difficulty){
+      leds[int(NUM_LEDS*0.5) + i] = playerColor;
+    }else{
+      leds[int(NUM_LEDS*0.5) + i] = backgroundColor;
+    }
+  }
+  FastLED.show();
+}
+void checkDifficultyPotentiometer(){
+  int analogValue = analogRead(A0);
+  float voltage = floatMap(analogValue, 0, 1023, 0, difficultyLevels-1);
+  if(voltage != difficulty){
+    difficulty = voltage;
+    double scalingFactor;
+    if (difficulty < difficultyLevels / 2) {
+      // Increase delay for difficulty levels below half of difficultyLevels
+      scalingFactor = 1.0 + 0.5 * (difficultyLevels / 2 - difficulty) / (difficultyLevels / 2);
+    } else {
+      // Decrease delay for difficulty levels above half of difficultyLevels
+      scalingFactor = 1.0 - 0.5 * (difficulty - difficultyLevels / 2) / (difficultyLevels / 2);
+    }
+
+    // Calculate the adapted minDelayAdapted
+    minDelayAdapted = minDelay * scalingFactor;
+    maxDelayAdapted = maxDelay * scalingFactor;
+
+    Serial.println("Difficulty: " + String(difficulty) + ", minDelay: " + String(minDelayAdapted) + ", maxDelay: " + String(maxDelayAdapted));
+    showDifficultyBoard();
+  }
+  // Serial.print("Analog: ");
+  // Serial.print(analogValue);
+  // Serial.print(", Voltage: ");
+  // Serial.println(voltage);
+}
+float floatMap(float x, float in_min, float in_max, float out_min, float out_max) {
+  return round((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min);
 }
 
 void setupGame() {
@@ -89,8 +144,8 @@ void setupGame() {
 }
 
 void startGame(int player) {
-  if(scorePlayerOne != 0 || scorePlayerTwo != 0){
-    removeScoreBoard();
+  if(scoreBoardShown || difficultyBoardShown){
+    removeBoards();
   }
   if (player == 1) {
     ballPosition = GAME_LED_WIDTH - 1;
@@ -106,7 +161,7 @@ void startGame(int player) {
   bounceCounter = 0;
   animatedPixels[0] = ballPosition;
   animationSet = true;
-  gameDelay = (maxDelay - minDelay) / 2;
+  gameDelay = (maxDelayAdapted - minDelayAdapted) / 2;
   lastUpdateTime = gameDelay;
   gameRunning = true;
 }
@@ -120,12 +175,12 @@ bool shootBack(int player) {
     bounceCounter++;
     
     if(ballPosition < GAME_LED_WIDTH){
-      gameDelay = minDelay + (float(ballPosition)/ float(GAME_LED_WIDTH-1)) * (maxDelay - minDelay);
+      gameDelay = minDelayAdapted + (float(ballPosition)/ float(GAME_LED_WIDTH-1)) * (maxDelayAdapted - minDelayAdapted);
     }else{
-      gameDelay = minDelay + (float(NUM_LEDS - 1 - ballPosition) / float(GAME_LED_WIDTH-1)) * (maxDelay - minDelay);
+      gameDelay = minDelayAdapted + (float(NUM_LEDS - 1 - ballPosition) / float(GAME_LED_WIDTH-1)) * (maxDelayAdapted - minDelayAdapted);
     }
 
-    float speedMultiplier = 1.0 - (float) min(bounceCounter, 49) / 50.0; // Adjust this multiplier as needed
+    float speedMultiplier = 1.0 - (float) min(bounceCounter, 39) / 40.0; // Adjust this multiplier as needed
     gameDelay = int(gameDelay * speedMultiplier);
     
     animatedPixels[0] = ballPosition;
@@ -177,6 +232,7 @@ void updateAnimationVisual(bool show = false, bool end = false){
   }
 }
 void showScoreBoard(int brightness = BRIGHTNESS){
+  scoreBoardShown = true;
   CRGB borderColor = CRGBA(255, 255, 255, brightness);
   CRGB playerColor = CRGBA(0, 255, 0, brightness);
   CRGB backgroundColor = CRGBA(255, 255, 0, brightness);
@@ -289,11 +345,19 @@ void updateBallVisual() {
   }
 }
 
-void removeScoreBoard(){
+void removeBoards(){
   for(int j = 1; j <= 10; j++){
-    showScoreBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
-    delay(10);
+    if(scoreBoardShown){
+      showScoreBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
+      delay(10);
+    }
+    if(difficultyBoardShown){
+      showDifficultyBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
+      delay(10);
+    } 
   }
+  scoreBoardShown = false;
+  difficultyBoardShown = false;
 }
 void updateScoreWinnerVisual(bool playerOneWins, int i){
   int position;
