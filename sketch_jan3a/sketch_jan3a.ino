@@ -23,6 +23,8 @@ bool scoreBoardShown = false;
 bool animationSet = false;
 bool gameRunning = false;
 bool gameJustEnded = false;
+bool playerOneWins = false;
+bool lastGame = true;
 int bounceCounter = 0;
 int difficulty = ONULL;
 int difficultyLevels = 10;
@@ -30,10 +32,31 @@ bool difficultyBoardShown = false;
 
 unsigned long lastUpdateTime;
 int gameDelay;
-int minDelay = 10;
-int maxDelay = 50;
+int minDelay = 8;
+int maxDelay = 40;
 int minDelayAdapted;
 int maxDelayAdapted;
+
+CRGB CRGBA(int r, int g, int b, int brightness = BRIGHTNESS){
+    CRGB color = CRGB(r,g,b);
+    color.fadeLightBy(255 - brightness);
+    return color;
+}
+
+void setupGame(bool init = false) {
+  for (int i = 0; i < GAME_LED_WIDTH; i++) {
+    leds[i] = CRGBA(0, 255, 0);
+    leds[NUM_LEDS - 1 - i] = CRGBA(0, 255, 0);
+  }
+  if(!init){
+    if(playerOneWins){
+      leds[NUM_LEDS - GAME_LED_WIDTH -1] = CRGBA(255, 255, 255);
+    }else{
+      leds[GAME_LED_WIDTH] = CRGBA(255, 255, 255);
+    }
+  }
+   FastLED.show();
+}
 
 void setup() {
   Serial.begin(115200);
@@ -43,7 +66,7 @@ void setup() {
   playerTwoButton.setDebounceTime(50);
 
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
-  setupGame();
+  setupGame(true);
 }
 
 void loop() {
@@ -60,14 +83,26 @@ void loop() {
   
   if(playerOneButton.isPressed()){
     if(!gameRunning){
-      startGame(1);
+      if(!lastGame){
+        if(!playerOneWins){
+          startGame(1);
+        }
+      }else{
+        startGame(1);
+      }
     }else if(ballDirection == -1){
       shootBack(1);
     }
   }
   if(playerTwoButton.isPressed()){
     if(!gameRunning){
-      startGame(2);
+       if(!lastGame){
+        if(playerOneWins){
+          startGame(2);
+        }
+      }else{
+        startGame(2);
+      }
     }else if(ballDirection == 1){
       shootBack(2);
     }
@@ -82,16 +117,12 @@ void loop() {
     checkDifficultyPotentiometer();
   }
 }
-CRGB CRGBA(int r, int g, int b, int brightness = BRIGHTNESS){
-    CRGB color = CRGB(r,g,b);
-    color.fadeLightBy(255 - brightness);
-    return color;
-}
+
 void showDifficultyBoard(int brightness = BRIGHTNESS){
   difficultyBoardShown = true;
   scoreBoardShown = false;
-  CRGB borderColor = CRGBA(255, 255, 255, brightness);
-  CRGB playerColor = CRGBA(0, 255, 0, brightness);
+  CRGB borderColor = CRGBA(0, 0, 0, brightness);
+  CRGB playerColor = CRGBA(255, 0, 0, brightness);
   CRGB backgroundColor = CRGBA(255, 255, 0, brightness);
 
   leds[int(NUM_LEDS*0.5) + difficultyLevels/2] = borderColor;
@@ -133,14 +164,6 @@ void checkDifficultyPotentiometer(){
 }
 float floatMap(float x, float in_min, float in_max, float out_min, float out_max) {
   return round((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min);
-}
-
-void setupGame() {
-  for (int i = 0; i < GAME_LED_WIDTH; i++) {
-    leds[i] = CRGBA(0, 255, 0);
-    leds[NUM_LEDS - 1 - i] = CRGBA(0, 255, 0);
-    FastLED.show();
-  }
 }
 
 void startGame(int player) {
@@ -233,9 +256,9 @@ void updateAnimationVisual(bool show = false, bool end = false){
 }
 void showScoreBoard(int brightness = BRIGHTNESS){
   scoreBoardShown = true;
-  CRGB borderColor = CRGBA(255, 255, 255, brightness);
+  CRGB borderColor = CRGBA(0, 0, 0, brightness);
   CRGB playerColor = CRGBA(0, 255, 0, brightness);
-  CRGB backgroundColor = CRGBA(255, 255, 0, brightness);
+  CRGB backgroundColor = CRGBA(255, 0, 0, brightness);
 
   leds[int(NUM_LEDS*0.5)] = borderColor;
   // leds[int(NUM_LEDS*0.5) + scoreNeeded + 1] = borderColor;
@@ -259,7 +282,8 @@ void showScoreBoard(int brightness = BRIGHTNESS){
   FastLED.show();
 }
 
-void endGame(bool playerOneWins){
+void endGame(bool bPlayerOneWins){
+  playerOneWins = bPlayerOneWins;
   gameRunning = false;
   prevBallPosition = ONULL;
   leds[ballPosition] = CRGBA(0, 0, 0);
@@ -303,6 +327,9 @@ void endGame(bool playerOneWins){
         showScoreBoard(BRIGHTNESS + 15 * scaledValue);
         delay(40);
     }
+    lastGame = true;
+  }else{
+    lastGame = false;
   }
   setupGame();
   //Neccesary because of isPressed bug
