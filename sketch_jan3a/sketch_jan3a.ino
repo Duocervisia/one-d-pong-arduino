@@ -43,19 +43,70 @@ CRGB CRGBA(int r, int g, int b, int brightness = BRIGHTNESS){
     return color;
 }
 
-void setupGame(bool init = false) {
+void showScoreBoard(int brightness = BRIGHTNESS){
+  scoreBoardShown = true;
+  CRGB borderColor = CRGBA(0, 0, 0, brightness);
+  CRGB playerColor = CRGBA(0, 255, 0, brightness);
+  CRGB backgroundColor = CRGBA(255, 0, 0, brightness);
+
+  leds[int(NUM_LEDS*0.5)] = borderColor;
+  // leds[int(NUM_LEDS*0.5) + scoreNeeded + 1] = borderColor;
+  leds[int(NUM_LEDS*0.5)-1] = borderColor;
+  // leds[int(NUM_LEDS*0.5)-1 - scoreNeeded - 1] = borderColor;
+
+  for(int i = 0; i < scoreNeeded; i++){
+    if(i < scorePlayerOne){
+      leds[int(NUM_LEDS*0.5) - 2 - i] = playerColor;
+    }else{
+      leds[int(NUM_LEDS*0.5) - 2 - i] = backgroundColor;
+    }
+  }
+  for(int i = 0; i < scoreNeeded; i++){
+    if(i < scorePlayerTwo){
+      leds[int(NUM_LEDS*0.5) + 1 + i] = playerColor;
+    }else{
+      leds[int(NUM_LEDS*0.5) + 1 + i] = backgroundColor;
+    }
+  }
+  FastLED.show();
+}
+
+void showDifficultyBoard(int brightness = BRIGHTNESS){
+  difficultyBoardShown = true;
+  scoreBoardShown = false;
+  CRGB borderColor = CRGBA(0, 0, 0, brightness);
+  CRGB playerColor = CRGBA(255, 0, 0, brightness);
+  CRGB backgroundColor = CRGBA(255, 255, 0, brightness);
+
+  leds[int(NUM_LEDS*0.5) + difficultyLevels/2] = borderColor;
+  leds[int(NUM_LEDS*0.5)-1 - difficultyLevels/2] = borderColor;
+  for(int i = -difficultyLevels/2; i < difficultyLevels/2; i++){
+    if(i+difficultyLevels/2 <= difficulty){
+      leds[int(NUM_LEDS*0.5) + i] = playerColor;
+    }else{
+      leds[int(NUM_LEDS*0.5) + i] = backgroundColor;
+    }
+  }
+  FastLED.show();
+}
+
+void setupGame() {
   for (int i = 0; i < GAME_LED_WIDTH; i++) {
     leds[i] = CRGBA(0, 255, 0);
     leds[NUM_LEDS - 1 - i] = CRGBA(0, 255, 0);
   }
-  if(!init){
+  if(!lastGame){
     if(playerOneWins){
       leds[NUM_LEDS - GAME_LED_WIDTH -1] = CRGBA(255, 255, 255);
     }else{
       leds[GAME_LED_WIDTH] = CRGBA(255, 255, 255);
     }
+  }else{
+    scorePlayerOne = 0;
+    scorePlayerTwo = 0;
+    showScoreBoard();
   }
-   FastLED.show();
+  FastLED.show();
 }
 
 void setup() {
@@ -66,7 +117,7 @@ void setup() {
   playerTwoButton.setDebounceTime(50);
 
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
-  setupGame(true);
+  setupGame();
 }
 
 void loop() {
@@ -118,24 +169,6 @@ void loop() {
   }
 }
 
-void showDifficultyBoard(int brightness = BRIGHTNESS){
-  difficultyBoardShown = true;
-  scoreBoardShown = false;
-  CRGB borderColor = CRGBA(0, 0, 0, brightness);
-  CRGB playerColor = CRGBA(255, 0, 0, brightness);
-  CRGB backgroundColor = CRGBA(255, 255, 0, brightness);
-
-  leds[int(NUM_LEDS*0.5) + difficultyLevels/2] = borderColor;
-  leds[int(NUM_LEDS*0.5)-1 - difficultyLevels/2] = borderColor;
-  for(int i = -difficultyLevels/2; i < difficultyLevels/2; i++){
-    if(i+difficultyLevels/2 <= difficulty){
-      leds[int(NUM_LEDS*0.5) + i] = playerColor;
-    }else{
-      leds[int(NUM_LEDS*0.5) + i] = backgroundColor;
-    }
-  }
-  FastLED.show();
-}
 void checkDifficultyPotentiometer(){
   int analogValue = analogRead(A0);
   float voltage = floatMap(analogValue, 0, 1023, 0, difficultyLevels-1);
@@ -176,10 +209,6 @@ void startGame(int player) {
   } else {
     ballPosition = NUM_LEDS - GAME_LED_WIDTH;
     ballDirection = -1;
-  }
-  if(scorePlayerOne == scoreNeeded || scorePlayerTwo == scoreNeeded){
-    scorePlayerOne = 0;
-    scorePlayerTwo = 0;
   }
   bounceCounter = 0;
   animatedPixels[0] = ballPosition;
@@ -254,33 +283,7 @@ void updateAnimationVisual(bool show = false, bool end = false){
     FastLED.show();
   }
 }
-void showScoreBoard(int brightness = BRIGHTNESS){
-  scoreBoardShown = true;
-  CRGB borderColor = CRGBA(0, 0, 0, brightness);
-  CRGB playerColor = CRGBA(0, 255, 0, brightness);
-  CRGB backgroundColor = CRGBA(255, 0, 0, brightness);
 
-  leds[int(NUM_LEDS*0.5)] = borderColor;
-  // leds[int(NUM_LEDS*0.5) + scoreNeeded + 1] = borderColor;
-  leds[int(NUM_LEDS*0.5)-1] = borderColor;
-  // leds[int(NUM_LEDS*0.5)-1 - scoreNeeded - 1] = borderColor;
-
-  for(int i = 0; i < scoreNeeded; i++){
-    if(i < scorePlayerOne){
-      leds[int(NUM_LEDS*0.5) - 2 - i] = playerColor;
-    }else{
-      leds[int(NUM_LEDS*0.5) - 2 - i] = backgroundColor;
-    }
-  }
-  for(int i = 0; i < scoreNeeded; i++){
-    if(i < scorePlayerTwo){
-      leds[int(NUM_LEDS*0.5) + 1 + i] = playerColor;
-    }else{
-      leds[int(NUM_LEDS*0.5) + 1 + i] = backgroundColor;
-    }
-  }
-  FastLED.show();
-}
 
 void endGame(bool bPlayerOneWins){
   playerOneWins = bPlayerOneWins;
