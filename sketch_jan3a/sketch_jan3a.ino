@@ -163,9 +163,6 @@ void setup() {
 }
 
 void loop() {
-  for(int i = 0; i < 100; i++){
-    Serial.println(random(2));
-  }
   playerOneButton.loop();
   playerTwoButton.loop();
 
