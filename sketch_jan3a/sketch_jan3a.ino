@@ -18,17 +18,22 @@ int ballDirection;
 int animatedPixels[5] = {ONULL,ONULL,ONULL,ONULL,ONULL};
 int scorePlayerOne = 0;
 int scorePlayerTwo = 0;
-int scoreNeeded = 3;
+int scoreNeeded = 5;
 bool scoreBoardShown = false;
 bool animationSet = false;
 bool gameRunning = false;
 bool gameJustEnded = false;
 bool playerOneWins = false;
+bool playerOneStarts = false;
 bool lastGame = true;
+bool initShootAnimation = false;
 int bounceCounter = 0;
 int difficulty = ONULL;
 int difficultyLevels = 10;
 bool difficultyBoardShown = false;
+int shotStrengthPosition = ONULL;
+bool shotStrengthReversed = false;
+
 
 unsigned long lastUpdateTime;
 int gameDelay;
@@ -74,19 +79,33 @@ void showScoreBoard(int brightness = BRIGHTNESS){
 void showDifficultyBoard(int brightness = BRIGHTNESS){
   difficultyBoardShown = true;
   scoreBoardShown = false;
-  CRGB borderColor = CRGBA(0, 0, 0, brightness);
-  CRGB playerColor = CRGBA(255, 0, 0, brightness);
-  CRGB backgroundColor = CRGBA(255, 255, 0, brightness);
-
-  leds[int(NUM_LEDS*0.5) + difficultyLevels/2] = borderColor;
-  leds[int(NUM_LEDS*0.5)-1 - difficultyLevels/2] = borderColor;
-  for(int i = -difficultyLevels/2; i < difficultyLevels/2; i++){
-    if(i+difficultyLevels/2 <= difficulty){
-      leds[int(NUM_LEDS*0.5) + i] = playerColor;
-    }else{
-      leds[int(NUM_LEDS*0.5) + i] = backgroundColor;
+  boardAnimation(
+    CRGBA(255, 255, 0, brightness),
+    CRGBA(255, 0, 0, brightness),
+    int(NUM_LEDS*0.5)-difficultyLevels/2, 
+    int(NUM_LEDS*0.5)+difficultyLevels/2 -1, 
+    1, 
+    int(NUM_LEDS*0.5)-difficultyLevels/2 + difficulty);
+}
+void boardAnimation(CRGB backgroundColor, CRGB foregroundColor, int startPosition, int endPosition, int direction, int position){
+  if(direction == 1){
+    for(int i = startPosition; i <= endPosition; i++){
+      if(i < position){
+        leds[i] = foregroundColor;
+      }else{
+        leds[i] = backgroundColor;
+      }
+    }
+  }else{
+    for(int i = startPosition; i >= endPosition; i--){
+      if(i > position){
+        leds[i] = foregroundColor;
+      }else{
+        leds[i] = backgroundColor;
+      }
     }
   }
+ 
   FastLED.show();
 }
 
@@ -95,15 +114,38 @@ void setupGame() {
     leds[i] = CRGBA(0, 255, 0);
     leds[NUM_LEDS - 1 - i] = CRGBA(0, 255, 0);
   }
+  
+  initShootAnimation = true;
+
   if(!lastGame){
+    ballDirection = 1;
+    ballPosition = GAME_LED_WIDTH - 1;
+    playerOneStarts = true;
+
     if(playerOneWins){
-      leds[NUM_LEDS - GAME_LED_WIDTH -1] = CRGBA(255, 255, 255);
-    }else{
-      leds[GAME_LED_WIDTH] = CRGBA(255, 255, 255);
+      ballDirection *= -1;
+      ballPosition = NUM_LEDS - GAME_LED_WIDTH;
+      playerOneStarts = false;
     }
+    
+    // if(playerOneWins){
+    //   leds[NUM_LEDS - GAME_LED_WIDTH -1] = CRGBA(255, 255, 255);
+    // }else{
+    //   leds[GAME_LED_WIDTH] = CRGBA(255, 255, 255);
+    // }
   }else{
     scorePlayerOne = 0;
     scorePlayerTwo = 0;
+   
+    ballDirection = 1;
+    ballPosition = GAME_LED_WIDTH - 1;
+    playerOneStarts = true;
+
+    if(random(2) == 1){
+      ballDirection *= -1;
+      ballPosition = NUM_LEDS - GAME_LED_WIDTH;
+      playerOneStarts = false;
+    }
     showScoreBoard();
   }
   FastLED.show();
@@ -121,6 +163,9 @@ void setup() {
 }
 
 void loop() {
+  for(int i = 0; i < 100; i++){
+    Serial.println(random(2));
+  }
   playerOneButton.loop();
   playerTwoButton.loop();
 
@@ -138,7 +183,7 @@ void loop() {
         if(!playerOneWins){
           startGame(1);
         }
-      }else{
+      }else if(playerOneStarts){
         startGame(1);
       }
     }else if(ballDirection == -1){
@@ -151,7 +196,7 @@ void loop() {
         if(playerOneWins){
           startGame(2);
         }
-      }else{
+      }else if(!playerOneStarts){
         startGame(2);
       }
     }else if(ballDirection == 1){
@@ -166,12 +211,72 @@ void loop() {
   }
   if(!gameRunning){
     checkDifficultyPotentiometer();
+    if(currentTime - lastUpdateTime >= (maxDelayAdapted - minDelayAdapted) / 3 * 2){
+
+      int startPosition = 0;
+      int endPosition = GAME_LED_WIDTH - 1;
+      if(!playerOneStarts){
+        startPosition = NUM_LEDS - 1;
+        endPosition = NUM_LEDS - GAME_LED_WIDTH;
+      }
+
+      if(initShootAnimation){
+        shotStrengthPosition = startPosition;
+        initShootAnimation = false;
+        shotStrengthReversed = false;
+      }else{
+        if(playerOneStarts){
+          if(shotStrengthReversed){
+            if(shotStrengthPosition == 0){
+              shotStrengthReversed = !shotStrengthReversed;
+              shotStrengthPosition++;
+            }else{
+              shotStrengthPosition--;
+            }
+          }else{
+            if(shotStrengthPosition == GAME_LED_WIDTH){
+              shotStrengthReversed = !shotStrengthReversed;
+              shotStrengthPosition--;
+            }else{
+              shotStrengthPosition++;
+            }
+          }
+        }else{
+          if(shotStrengthReversed){
+            if(shotStrengthPosition == NUM_LEDS - 1){
+              shotStrengthReversed = !shotStrengthReversed;
+              shotStrengthPosition--;
+            }else{
+              shotStrengthPosition++;
+            }
+          }else{
+            if(shotStrengthPosition == NUM_LEDS - GAME_LED_WIDTH - 1){
+              shotStrengthReversed = !shotStrengthReversed;
+              shotStrengthPosition++;
+            }else{
+              shotStrengthPosition--;
+            }
+          }
+        }
+      }
+      Serial.println("StrinshotStrengthPosition: " + String(shotStrengthPosition) + ", startPosition: " + String(startPosition) + ", endPosition: " + String(endPosition));
+    
+      boardAnimation(
+        CRGBA(255, 0, 0, BRIGHTNESS),
+        CRGBA(0, 255, 0, BRIGHTNESS),
+        startPosition, 
+        endPosition, 
+        ballDirection, 
+        shotStrengthPosition);
+
+      lastUpdateTime = currentTime;
+    }
   }
 }
 
 void checkDifficultyPotentiometer(){
   int analogValue = analogRead(A0);
-  float voltage = floatMap(analogValue, 0, 1023, 0, difficultyLevels-1);
+  float voltage = floatMap(analogValue, 0, 1023, 1, difficultyLevels);
   if(voltage != difficulty){
     difficulty = voltage;
     double scalingFactor;
@@ -203,17 +308,11 @@ void startGame(int player) {
   if(scoreBoardShown || difficultyBoardShown){
     removeBoards();
   }
-  if (player == 1) {
-    ballPosition = GAME_LED_WIDTH - 1;
-    ballDirection = 1;
-  } else {
-    ballPosition = NUM_LEDS - GAME_LED_WIDTH;
-    ballDirection = -1;
-  }
+  ballPosition = shotStrengthPosition;
   bounceCounter = 0;
   animatedPixels[0] = ballPosition;
   animationSet = true;
-  gameDelay = (maxDelayAdapted - minDelayAdapted) / 2;
+  setGameDelay();
   lastUpdateTime = gameDelay;
   gameRunning = true;
 }
@@ -226,14 +325,7 @@ bool shootBack(int player) {
     ballDirection *= -1;
     bounceCounter++;
     
-    if(ballPosition < GAME_LED_WIDTH){
-      gameDelay = minDelayAdapted + (float(ballPosition)/ float(GAME_LED_WIDTH-1)) * (maxDelayAdapted - minDelayAdapted);
-    }else{
-      gameDelay = minDelayAdapted + (float(NUM_LEDS - 1 - ballPosition) / float(GAME_LED_WIDTH-1)) * (maxDelayAdapted - minDelayAdapted);
-    }
-
-    float speedMultiplier = 1.0 - (float) min(bounceCounter, 39) / 40.0; // Adjust this multiplier as needed
-    gameDelay = int(gameDelay * speedMultiplier);
+    setGameDelay();
     
     animatedPixels[0] = ballPosition;
     animationSet = true;
@@ -243,6 +335,17 @@ bool shootBack(int player) {
   }
   return true;
 }
+void setGameDelay(){
+   if(ballPosition < GAME_LED_WIDTH){
+      gameDelay = minDelayAdapted + (float(ballPosition)/ float(GAME_LED_WIDTH-1)) * (maxDelayAdapted - minDelayAdapted);
+    }else{
+      gameDelay = minDelayAdapted + (float(NUM_LEDS - 1 - ballPosition) / float(GAME_LED_WIDTH-1)) * (maxDelayAdapted - minDelayAdapted);
+    }
+
+    float speedMultiplier = 1.0 - (float) min(bounceCounter, 39) / 40.0; // Adjust this multiplier as needed
+    gameDelay = int(gameDelay * speedMultiplier);
+}
+
 void updateAnimationPosition(){
   for(int i = sizeof(animatedPixels) / sizeof(animatedPixels[0]) - 1; i >= 0; i--) {
     if(i != 0){
