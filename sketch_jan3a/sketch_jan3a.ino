@@ -256,7 +256,7 @@ void loop() {
           }
         }
       }
-      Serial.println("StrinshotStrengthPosition: " + String(shotStrengthPosition) + ", startPosition: " + String(startPosition) + ", endPosition: " + String(endPosition));
+      // Serial.println("StrinshotStrengthPosition: " + String(shotStrengthPosition) + ", startPosition: " + String(startPosition) + ", endPosition: " + String(endPosition));
     
       boardAnimation(
         CRGBA(255, 0, 0, BRIGHTNESS),
@@ -289,7 +289,7 @@ void checkDifficultyPotentiometer(){
     minDelayAdapted = minDelay * scalingFactor;
     maxDelayAdapted = maxDelay * scalingFactor;
 
-    Serial.println("Difficulty: " + String(difficulty) + ", minDelay: " + String(minDelayAdapted) + ", maxDelay: " + String(maxDelayAdapted));
+    // Serial.println("Difficulty: " + String(difficulty) + ", minDelay: " + String(minDelayAdapted) + ", maxDelay: " + String(maxDelayAdapted));
     showScoreBoard(0);
     showDifficultyBoard();
   }
@@ -339,7 +339,7 @@ void setGameDelay(){
     }else{
       gameDelay = minDelayAdapted + (float(NUM_LEDS - 1 - ballPosition) / float(GAME_LED_WIDTH-1)) * (maxDelayAdapted - minDelayAdapted);
     }
-    Serial.println("GameDelay: " + String(gameDelay));
+    // Serial.println("GameDelay: " + String(gameDelay));
 
     float speedMultiplier = 1.0 - (float) min(bounceCounter, 39) / 40.0; // Adjust this multiplier as needed
     gameDelay = int(gameDelay * speedMultiplier);
