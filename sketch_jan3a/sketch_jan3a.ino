@@ -271,6 +271,24 @@ void loop() {
   }
 }
 
+void removeBoards(int delayDuration = 10){
+  if(!scoreBoardShown && !difficultyBoardShown){
+    return;
+  }
+  for(int j = 1; j <= 10; j++){
+    if(scoreBoardShown){
+      showScoreBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
+      delay(delayDuration);
+    }
+    if(difficultyBoardShown){
+      showDifficultyBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
+      delay(delayDuration);
+    } 
+  }
+  scoreBoardShown = false;
+  difficultyBoardShown = false;
+}
+
 void checkDifficultyPotentiometer(){
   int analogValue = analogRead(A0);
   float voltage = floatMap(analogValue, 0, 1023, 1, difficultyLevels);
@@ -290,7 +308,9 @@ void checkDifficultyPotentiometer(){
     maxDelayAdapted = maxDelay * scalingFactor;
 
     // Serial.println("Difficulty: " + String(difficulty) + ", minDelay: " + String(minDelayAdapted) + ", maxDelay: " + String(maxDelayAdapted));
-    showScoreBoard(0);
+    if(scoreBoardShown){
+      removeBoards(0);
+    }
     showDifficultyBoard();
   }
   // Serial.print("Analog: ");
@@ -477,20 +497,6 @@ void updateBallVisual() {
   }
 }
 
-void removeBoards(){
-  for(int j = 1; j <= 10; j++){
-    if(scoreBoardShown){
-      showScoreBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
-      delay(10);
-    }
-    if(difficultyBoardShown){
-      showDifficultyBoard(float(BRIGHTNESS)/10.0 * (10.0-j));
-      delay(10);
-    } 
-  }
-  scoreBoardShown = false;
-  difficultyBoardShown = false;
-}
 void updateScoreWinnerVisual(bool playerOneWins, int i){
   int position;
   if(playerOneWins){
