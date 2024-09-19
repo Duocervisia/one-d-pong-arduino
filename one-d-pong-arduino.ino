@@ -4,7 +4,7 @@
 #define DATA_PIN 13
 #define BRIGHTNESS 5
 // Number of LEDs on the strip
-#define NUM_LEDS 100
+#define NUM_LEDS 96
 #define GAME_LED_WIDTH 12
 #define ONULL -1
 
